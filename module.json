@@ -1,7 +1,7 @@
 {
     "name": "Delete On Fetch",
     "alias": "deleteonfetch",
-    "description": "Deletes emails from remote server, after fetched.",
+    "description": "Deletes emails from remote server, after fetched, without warnings. Use at your own risk!",
     "version": "1.0.0",
     "detailsUrl": "",
     "author": "Webdados - Marco Almeida",
