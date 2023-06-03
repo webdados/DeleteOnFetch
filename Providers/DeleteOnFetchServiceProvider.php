@@ -35,7 +35,11 @@ class DeleteOnFetchServiceProvider extends ServiceProvider
      */
     public function hooks()
     {
-        
+        // Delete from server after set as seen / fetched
+        \Eventy::addAction('fetch_emails.after_set_seen', function( $message, $mailbox, $fetchemailsobject ) {
+            // Delete without warning
+            $message->delete();
+        }, 20, 3 );
     }
 
     /**
