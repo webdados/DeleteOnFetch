@@ -7,6 +7,8 @@
     "author": "Webdados - Marco Almeida",
     "authorUrl": "https://www.webdados.pt",
     "img": "/modules/deleteonfetch/images/icon.png",
+    "latestVersionUrl": "https://raw.githubusercontent.com/webdados/DeleteOnFetch/main/module.json",
+    "latestVersionZipUrl": "https://github.com/webdados/DeleteOnFetch/releases/latest/download/DeleteOnFetch.zip",
     "requiredAppVersion": "1.0.2",
     "license": "AGPL-3.0",
     "keywords": [],
