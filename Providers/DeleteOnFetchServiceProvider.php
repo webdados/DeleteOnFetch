@@ -17,6 +17,14 @@ class DeleteOnFetchServiceProvider extends ServiceProvider
     protected $defer = false;
 
     /**
+     * Available deletion delay options, in seconds.
+     * Keys are the values stored/posted; used for both the settings <select> and save-time validation.
+     *
+     * @var int[]
+     */
+    const DELAY_OPTIONS = array( 0, 3600, 43200, 86400, 172800, 604800, 2592000 );
+
+    /**
      * Boot the application events.
      *
      * @return void
@@ -28,6 +36,12 @@ class DeleteOnFetchServiceProvider extends ServiceProvider
         $this->registerFactories();
         $this->loadMigrationsFrom(__DIR__ . '/../Database/Migrations');
         $this->hooks();
+
+        if ( $this->app->runningInConsole() ) {
+            $this->commands( array(
+                \Modules\DeleteOnFetch\Console\Commands\ProcessPendingDeletions::class,
+            ) );
+        }
     }
 
     /**
@@ -40,6 +54,23 @@ class DeleteOnFetchServiceProvider extends ServiceProvider
         // Option on the Mailbox Fetching Emails options
         \Eventy::addAction( 'mailbox.connection_incoming.after_default_settings', array( $this, 'mailboxIncomingOptions' ) );
         \Eventy::addAction( 'mailbox.incoming_settings_before_save', array( $this, 'mailboxIncomingOptionsSave' ), 10, 2 );
+        // Register our delayed-deletion sweep with FreeScout's own scheduler
+        \Eventy::addFilter( 'schedule', array( $this, 'scheduleCommand' ) );
+    }
+
+    /**
+     * Add our pending-deletions sweep to FreeScout's scheduler.
+     *
+     * @param \Illuminate\Console\Scheduling\Schedule $schedule
+     * @return \Illuminate\Console\Scheduling\Schedule
+     */
+    public function scheduleCommand( $schedule )
+    {
+        $schedule->command( 'deleteonfetch:process-pending-deletions' )
+            ->everyFifteenMinutes()
+            ->withoutOverlapping( 10 );
+
+        return $schedule;
     }
 
     /**
@@ -119,15 +150,36 @@ class DeleteOnFetchServiceProvider extends ServiceProvider
     }
 
     /**
-     * Delete the message from remote server.
+     * Delete the message from remote server, or schedule it for later deletion if a delay is set.
      *
      * @return void
      */
     public function deleteMessage( $message, $mailbox, $fetchemailsobject ) {
-        if ( \Option::get( 'deleteonfetch.delete_after_fetch_active_mailbox_'.$mailbox->id ) == '1' ) {
+        if ( \Option::get( 'deleteonfetch.delete_after_fetch_active_mailbox_'.$mailbox->id ) != '1' ) {
+            return;
+        }
+
+        $delay = (int) \Option::get( 'deleteonfetch.delete_after_fetch_delay_mailbox_'.$mailbox->id, 0 );
+
+        if ( $delay <= 0 ) {
             // Delete without warning
             $message->delete();
+            return;
         }
+
+        // Record it for the delayed sweep instead of deleting now.
+        \Modules\DeleteOnFetch\Entities\PendingDeletion::updateOrCreate(
+            array(
+                'mailbox_id' => $mailbox->id,
+                'folder'     => $message->getFolderPath(),
+                'uid'        => $message->uid,
+            ),
+            array(
+                'delete_after' => \Carbon\Carbon::now()->addSeconds( $delay ),
+                'attempts'     => 0,
+                'last_error'   => null,
+            )
+        );
     }
 
     /**
@@ -136,6 +188,16 @@ class DeleteOnFetchServiceProvider extends ServiceProvider
      * @return void
      */
     public function mailboxIncomingOptions( $mailbox ) {
+        $delay = (int) \Option::get( 'deleteonfetch.delete_after_fetch_delay_mailbox_'.$mailbox->id, 0 );
+        $delay_labels = array(
+            0       => __( 'Immediately' ),
+            3600    => __( '1 hour' ),
+            43200   => __( '12 hours' ),
+            86400   => __( '1 day' ),
+            172800  => __( '2 days' ),
+            604800  => __( '1 week' ),
+            2592000 => __( '1 month' ),
+        );
         ?>
         <div id="delete-on-fetch-options">
             <div class="form-group">
@@ -154,6 +216,19 @@ class DeleteOnFetchServiceProvider extends ServiceProvider
                     </div>
                 </div>
             </div>
+            <div class="form-group">
+                <label for="delete_after_fetch_delay" class="col-sm-2 control-label"><?php echo __( 'Deletion delay' ); ?></label>
+                <div class="col-sm-6">
+                    <div class="controls">
+                        <select id="delete_after_fetch_delay" name="delete_after_fetch_delay" class="form-control input-sized">
+                            <?php foreach ( $delay_labels as $value => $label ): ?>
+                                <option value="<?php echo $value; ?>" <?php if ( $delay == $value ) echo 'selected="selected"'; ?>><?php echo $label; ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <i class="glyphicon glyphicon-info-sign icon-info icon-info-inline" data-toggle="popover" data-trigger="hover" data-placement="top" data-content="<?php echo __( 'How long to wait after fetching a message before permanently deleting it from the server.' ); ?>"></i>
+                    </div>
+                </div>
+            </div>
             <hr>
         </div>
         <?php
@@ -166,5 +241,11 @@ class DeleteOnFetchServiceProvider extends ServiceProvider
      */
     public function mailboxIncomingOptionsSave( $mailbox, $request ) {
         \Option::set( 'deleteonfetch.delete_after_fetch_active_mailbox_'.$mailbox->id, ( $request->filled( 'delete_after_fetch_active' ) ? '1' : '0' ) );
+
+        $delay = (int) $request->input( 'delete_after_fetch_delay', 0 );
+        if ( ! in_array( $delay, self::DELAY_OPTIONS, true ) ) {
+            $delay = 0;
+        }
+        \Option::set( 'deleteonfetch.delete_after_fetch_delay_mailbox_'.$mailbox->id, (string) $delay );
     }
 }
