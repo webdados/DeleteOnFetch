@@ -10,6 +10,3 @@ PRs are welcome.
 * Go to Manage > Settings > Tools and Clear Cache
 * Go to Modules and activate "Delete On Fetch"
 * For each Mailbox you want to delete the emails after fetching, go to Connection Settings > Fetching Emails and activate "Delete messages after fetch"
-
-## To do
-* Option to only delete from server after some days
