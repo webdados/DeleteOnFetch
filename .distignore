@@ -1,0 +1,27 @@
+# Operative system files
+*.DS_Store
+__MACOSX
+
+# Tooling files
+.git/*
+.git
+.github/*
+.github
+.svn/*
+.svn
+.distignore
+.gitignore
+.editorconfig
+.eslintignore
+.eslintrc.js
+.nvmrc
+.phpcs.xml.dist
+node_modules/*
+node_modules
+package.json
+package-lock.json
+webpack.config.js
+
+# Other files specific to the plugin
+README.md
+CHANGELOG.md

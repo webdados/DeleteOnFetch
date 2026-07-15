@@ -1,0 +1,21 @@
+name: Delete release when deleting tag
+
+on:
+  delete:
+
+jobs:
+  delete:
+    name: 🗑️ Delete Release
+    runs-on: ubuntu-latest
+    if: github.event.ref_type == 'tag'
+    steps:
+
+      - name: 🗑️ Delete Release
+        run: |
+          echo "Deleting release for tag: ${{ github.event.ref }}"
+          gh release delete ${{ github.event.ref }} --yes || echo "Release not found or already deleted"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+permissions:
+  contents: write  # needed to create releases and upload assets

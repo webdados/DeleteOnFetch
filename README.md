@@ -1,4 +1,4 @@
-# Delete On Fetch
+# Delete On Fetch for Freescout
 Freescout module that deletes emails from the remote server, after fetched, without warnings.
 Use at your own risk!
 
