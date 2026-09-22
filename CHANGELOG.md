@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.1 - 2026-09-22
+
+* Fixed the module icon showing as a broken image in Manage > Modules until the module is activated
+
 ## 3.0 - 2026-07-15
 
 * There's now a "Deletion delay" option next to "Delete messages after fetch" in each Mailbox > Connection Settings > Fetching Emails, so messages can be kept on the server for a while (1 hour, 12 hours, 1 day, 2 days, 1 week or 1 month) after being fetched before being permanently deleted. Defaults to "Immediately" to preserve previous behavior
