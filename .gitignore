@@ -1,0 +1,5 @@
+# Claude Code local session data / dev memory — never published
+.claude/
+
+# OS
+.DS_Store
